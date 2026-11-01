@@ -1,0 +1,43 @@
+{
+  "target_remark": "",
+  "dry_run": true,
+  "meals": {
+    "早餐": {
+      "time": "08:30",
+      "ask_text": "早上好呀，早餐吃了什么？记得报备哦～"
+    },
+    "午餐": {
+      "time": "12:30",
+      "ask_text": "中午啦，吃了什么呀？"
+    },
+    "晚餐": {
+      "time": "18:30",
+      "ask_text": "晚饭吃什么啦？记得报备～"
+    }
+  },
+  "wait_minutes": 30,
+  "poll_seconds": 15,
+  "auto_reply": true,
+  "warn_on_over": true,
+  "keep_unlocked": true,
+  "keep_days": 60,
+  "wechat": {
+    "process": "Weixin.exe",
+    "title": "微信",
+    "data_root": ""
+  },
+  "reader": {
+    "calibrated": false,
+    "auto_switch": true,
+    "menu_offset": [
+      70,
+      0
+    ]
+  },
+  "vision": {
+    "enabled": false,
+    "api_key": "",
+    "model": "qwen2.5vl:7b",
+    "base_url": "http://127.0.0.1:11434/v1"
+  }
+}

@@ -1,0 +1,29 @@
+# 构建产物
+build/
+dist/
+*.spec
+*.exe
+
+# 运行数据（含聊天记录，绝不入库）
+data/
+logs/
+photos/
+*.db
+*.db-wal
+*.db-shm
+
+# 本地临时文件
+ui_err.txt
+ui_out.txt
+__pycache__/
+*.pyc
+.venv/
+.vscode/
+.idea/
+
+# 旧的实验脚本（含私人截图）
+tools/
+meal_helper/
+main.py
+auto_wechat_test.py
+启动微信自动测试.bat
