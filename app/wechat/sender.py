@@ -5,6 +5,7 @@ from .. import logger
 from . import ocr, screenio, win32
 
 VK_CONTROL, VK_A, VK_DELETE, VK_F, VK_RETURN = 0x11, 0x41, 0x2E, 0x46, 0x0D
+VK_DOWN = 0x28
 
 
 class Sender:
@@ -18,14 +19,46 @@ class Sender:
         return bool(win32.find_window(self.wx.get("process", "Weixin.exe"),
                                       self.wx.get("title", "微信")))
 
-    def _verify_chat(self, hwnd, remark: str) -> bool:
+    def _open_by_search(self, hwnd, remark: str) -> str:
+        """Ctrl+F 搜索 → 回车打开第一条会话 → 校验标题。"""
+        try:
+            win32.hotkey(VK_CONTROL, VK_F)
+            time.sleep(0.6)
+            win32.hotkey(VK_CONTROL, VK_A)
+            win32.key(VK_DELETE)
+            time.sleep(0.3)
+            win32.paste(remark)
+            time.sleep(1.5)
+            win32.key(VK_RETURN)          # 微信 4.x：回车直接打开第一条结果
+            time.sleep(1.5)
+            state = self._verify_chat(hwnd, remark)
+            if state != "ok":
+                # 兜底：点下拉里的第一条
+                left, top, right, bottom = win32.rect(hwnd)
+                win32.click(left + int((right - left) * 0.50),
+                            top + int((bottom - top) * 0.365))
+                time.sleep(1.2)
+                state = self._verify_chat(hwnd, remark)
+            return state
+        except Exception as e:
+            logger.get().warning("搜索打开会话失败：%s", e)
+            return "unknown"
+
+    def _verify_chat(self, hwnd, remark: str) -> str:
+        """返回 ok / different / unknown。标题读不出来只算 unknown，不拦发送。"""
         try:
             img = screenio.capture(hwnd)
-            title = ocr.recognize(screenio.chat_title(img)).replace(" ", "")
+            lines = [l.strip() for l in ocr.recognize(screenio.chat_title(img)).splitlines() if l.strip()]
+            title = lines[0].replace(" ", "") if lines else ""
         except Exception:
-            return False
+            return "unknown"
         want = remark.replace(" ", "")
-        return bool(title) and (want in title or title in want)
+        if not title:
+            return "unknown"
+        # 标题可能被截断，用前 6 个字比对
+        if want[:6] in title or title[:6] in want:
+            return "ok"
+        return "different"
 
     def send(self, text: str, remark: str = "", verify=None) -> bool:
         log = logger.get()
@@ -57,20 +90,17 @@ class Sender:
                 return False
             time.sleep(0.3)
 
-            win32.hotkey(VK_CONTROL, VK_F)
-            time.sleep(0.5)
-            win32.hotkey(VK_CONTROL, VK_A)
-            win32.key(VK_DELETE)
-            win32.paste(remark)
-            time.sleep(1.0)
-            win32.key(VK_RETURN)
-            time.sleep(0.9)
+            state = self._verify_chat(hwnd, remark)
+            if state != "ok":
+                state = self._open_by_search(hwnd, remark)
 
-            # 发错人防护：确认打开的是她的会话
-            if not self._verify_chat(hwnd, remark):
-                self.last_error = f"发错人防护：当前会话不是「{remark}」，已中止"
+            if state == "different":
+                self.last_error = f"当前会话不是「{remark}」，已中止发送"
                 logger.get().warning(self.last_error)
                 return False
+            if state == "unknown":
+                self.last_error = "标题没读出来，已按备注搜索后直接发送"
+                logger.get().warning(self.last_error)
 
             left, top, right, bottom = win32.rect(hwnd)
             w, h = right - left, bottom - top

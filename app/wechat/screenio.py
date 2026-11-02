@@ -170,7 +170,9 @@ def copy_message(hwnd, x: int, y: int, menu_offset=(70, 0)) -> str:
     return get_clipboard().strip()
 
 def chat_title(img: Image.Image) -> str:
-    """聊天区顶部标题（当前会话的名字）。"""
+    """聊天区顶部标题（当前会话的名字）。左边界用选中行算，避开左侧搜索框。"""
     w, h = img.size
-    box = (int(w * 0.34), int(h * 0.05), int(w * 0.96), int(h * 0.20))
+    arr = np.asarray(img).astype(int)
+    left = chat_left(arr)
+    box = (max(0, left + 8), int(h * 0.05), int(w * 0.96), int(h * 0.20))
     return img.crop(box)

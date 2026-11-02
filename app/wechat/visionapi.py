@@ -32,6 +32,31 @@ def enabled(cfg: dict) -> bool:
     return bool(v.get("api_key")) or is_local(cfg)
 
 
+def is_ollama(cfg: dict) -> bool:
+    return "11434" in str((cfg or {}).get("vision", {}).get("base_url", ""))
+
+
+def _post_native(cfg: dict, img_b64: str, timeout: int = 120) -> str:
+    """本地 Ollama：走原生接口，便于用完立刻卸载（keep_alive）。"""
+    v = cfg.get("vision", {})
+    base = v.get("base_url", "http://127.0.0.1:11434").rstrip("/")
+    base = base.replace("/v1", "")
+    payload = {
+        "model": v.get("model", "qwen2.5vl:3b"),
+        "messages": [{"role": "user", "content": PROMPT, "images": [img_b64]}],
+        "stream": False,
+        "keep_alive": v.get("keep_alive", "60s"),
+        "options": {"temperature": 0, "num_ctx": int(v.get("num_ctx", 2048))},
+    }
+    req = urllib.request.Request(base + "/api/chat",
+                                 data=json.dumps(payload).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"},
+                                 method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        body = json.loads(resp.read().decode("utf-8"))
+    return (body.get("message") or {}).get("content", "").strip()
+
+
 def _post(cfg: dict, payload: dict, timeout: int = 120) -> str:
     v = cfg.get("vision", {})
     url = v.get("base_url", "https://ark.cn-beijing.volces.com/api/v3").rstrip("/") + "/chat/completions"
@@ -65,6 +90,11 @@ def read_image(cfg: dict, img) -> str:
         }],
         "temperature": 0,
     }
+    if is_ollama(cfg):
+        try:
+            return _post_native(cfg, b64).strip().strip("「」\"'")
+        except Exception:
+            return ""
     try:
         out = _post(cfg, payload)
     except Exception:

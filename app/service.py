@@ -34,8 +34,8 @@ def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
         log.exception("发送异常：%s", e)
         sent_ok = False
 
-    db.log("ask", remark, ask, 1 if sent_ok else 0,
-           "" if sent_ok else "send failed")
+    detail = "" if sent_ok else (getattr(sender, "last_error", "") or "send failed")
+    db.log("ask", remark, ask, 1 if sent_ok else 0, detail)
 
     if not sent_ok:
         db.insert_meal({
@@ -43,7 +43,7 @@ def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
             "source": "system", "raw_text": "", "status": "missed",
             "verdict_reason": "提醒没发出去", "plan_day": day.get("day"),
         })
-        notify.notify("提醒没发出去", f"{meal}的提醒发送失败，请检查微信窗口")
+        notify.notify("提醒没发出去", f"{meal}：{detail}")
         return {"ok": False, "reason": "send_failed"}
 
     deadline = time.monotonic() + wait_minutes * 60
