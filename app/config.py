@@ -25,6 +25,8 @@ DEFAULT_CONFIG = {
         "data_root": "",
     },
     "reader": {"calibrated": False, "menu_offset": [70, 0]},
+    "classify": {"enabled": True, "model": "qwen2.5vl:3b",
+                 "base_url": "http://127.0.0.1:11434", "keep_alive": "30s"},
     "vision": {
         "enabled": False,
         "api_key": "",

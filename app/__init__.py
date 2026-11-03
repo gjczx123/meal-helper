@@ -1,5 +1,5 @@
 """三餐助手 · 应用包"""
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 import datetime
 import sys

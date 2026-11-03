@@ -2,7 +2,7 @@
 import time
 from datetime import datetime, timedelta
 
-from . import analyze, db, logger, notify, parse, reply
+from . import analyze, classify, db, logger, notify, parse, reply
 from . import plan as planmod
 from .state import MealSession
 
@@ -57,6 +57,14 @@ def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
             batch = []
         new = session.take_new(batch)
         if new:
+            text = session.merge_text(new)
+            probe = parse.parse(text, day, meal)
+            looks_food = bool(probe.get("items")) or probe.get("fasting")
+            if not looks_food and classify.enabled(cfg):
+                if not classify.is_meal_report(cfg, text):
+                    log.info("判为闲聊，忽略：%s", text[:30])
+                    sleep(poll_seconds)
+                    continue
             msgs = new
             break
         sleep(poll_seconds)
