@@ -18,7 +18,9 @@ def day_plan(plan: dict, today: date) -> dict:
     idx = day_index(parse_date(plan["cycle_start"]), today)
     for d in plan["days"]:
         if int(d["day"]) == idx:
-            return d
+            out = dict(d)
+            out.setdefault("off_plan", plan.get("off_plan") or [])
+            return out
     raise KeyError(f"菜单里没有 DAY{idx}")
 
 

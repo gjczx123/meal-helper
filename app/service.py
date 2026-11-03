@@ -112,3 +112,26 @@ def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
 
     return {"ok": True, "record_id": rid, "status": verdict["status"],
             "text": text, "reply": answer, "day": day.get("day")}
+
+
+def record_manual(cfg: dict, plan: dict, when, meal: str, text: str) -> dict:
+    """补录一条：只解析、判定、入库，不发消息。"""
+    day = planmod.day_plan(plan, when)
+    parsed = parse.parse(text, day, meal)
+    verdict = analyze.judge(parsed, day, meal)
+    rid = db.insert_meal({
+        "date": when.isoformat(),
+        "meal": meal,
+        "msg_time": "",
+        "source": "manual",
+        "raw_text": text,
+        "plan_day": day.get("day"),
+        "items": verdict.get("items", []),
+        "status": verdict["status"],
+        "verdict_reason": "、".join(r["name"] for r in verdict.get("reasons", [])),
+        "analysis": verdict,
+        "reply_text": "",
+    })
+    db.log("manual_record", cfg.get("target_remark", ""), text, 1)
+    return {"ok": True, "record_id": rid, "status": verdict["status"],
+            "day": day.get("day"), "reasons": verdict.get("reasons", [])}
