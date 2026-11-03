@@ -22,7 +22,7 @@ class DiagPage(tk.Frame):
         card = w.Card(self, pad=16)
         card.pack(fill="x", padx=24, pady=8)
         self.rows = {}
-        for i, key in enumerate(["微信窗口", "屏幕锁定", "读消息", "发送模式", "数据目录"]):
+        for i, key in enumerate(["版本", "微信窗口", "屏幕锁定", "读消息", "发送模式", "数据目录"]):
             w.label(card.body, key, size="small", fg="muted").grid(row=i, column=0, sticky="w", pady=6)
             v = w.label(card.body, "—", size="body")
             v.grid(row=i, column=1, sticky="w", padx=16)
@@ -47,6 +47,9 @@ class DiagPage(tk.Frame):
         threading.Thread(target=run, daemon=True).start()
 
     def refresh(self):
+        from .. import __version__, build_stamp
+        self.rows["版本"].configure(text=f"v{__version__} · 构建 {build_stamp()}",
+                                  fg=COLORS["text"])
         cfg = self.app.cfg
         try:
             hwnd = win32.find_window(cfg["wechat"]["process"], cfg["wechat"]["title"])
