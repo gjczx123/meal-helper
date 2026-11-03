@@ -3,13 +3,15 @@ import time
 from datetime import datetime, timedelta
 
 from . import analyze, classify, db, logger, notify, parse, reply
+from .wechat import history
 from . import plan as planmod
 from .state import MealSession
 
 
 def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
              now: datetime = None, sleep=time.sleep,
-             wait_minutes: int = None, poll_seconds: int = None) -> dict:
+             wait_minutes: int = None, poll_seconds: int = None,
+             backfill: bool = True) -> dict:
     now = now or datetime.now()
     today = now.date()
     wait_minutes = int(wait_minutes if wait_minutes is not None else cfg.get("wait_minutes", 30))
@@ -68,6 +70,21 @@ def run_meal(cfg: dict, plan: dict, meal: str, sender, reader,
             msgs = new
             break
         sleep(poll_seconds)
+
+    if not msgs and backfill:
+        # 等待窗口内没等到，回溯聊天记录：找到我发的那条提醒，把她之后的回复捞回来
+        try:
+            back, err = history.find_replies(cfg, ask)
+        except Exception as e:
+            back, err = [], str(e)
+            log.warning("回溯失败：%s", e)
+        if back:
+            log.info("回溯补录到 %d 条：%s", len(back), " / ".join(back)[:60])
+            msgs = [{"id": "backfill-" + datetime.now().strftime("%H%M%S"),
+                     "ts": datetime.now().strftime("%H:%M:%S"),
+                     "text": "，".join(back), "image_path": ""}]
+        else:
+            log.info("回溯也没找到：%s", err)
 
     if not msgs:
         db.insert_meal({

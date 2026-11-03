@@ -39,6 +39,10 @@ class App(tk.Tk):
 
         self._setup_style()
         self._setup_icon()
+        try:
+            db.dedupe()
+        except Exception:
+            pass
         self._build()
         self.tray = tray_mod.start(self)
         notify.set_sink(lambda title, msg: self.tray and self.tray.notify(msg, title))

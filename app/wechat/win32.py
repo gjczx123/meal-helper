@@ -173,3 +173,7 @@ def right_click(x: int, y: int):
     user32.mouse_event(0x0008, 0, 0, 0, 0)
     time.sleep(0.03)
     user32.mouse_event(0x0010, 0, 0, 0, 0)
+
+def wheel(delta: int = 360):
+    """向上滚动（正数向上）。"""
+    user32.mouse_event(0x0800, 0, 0, int(delta), 0)

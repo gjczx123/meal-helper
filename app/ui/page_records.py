@@ -19,6 +19,7 @@ class RecordsPage(tk.Frame):
         w.ghost(head, "刷新", self.refresh).pack(side="right")
         w.primary(head, "看周报", self.show_weekly).pack(side="right", padx=8)
         w.ghost(head, "补录一条", self.open_manual).pack(side="right", padx=8)
+        w.ghost(head, "扫描聊天", self.scan_chat).pack(side="right", padx=8)
 
         body = tk.Frame(self, bg=COLORS["bg"])
         body.pack(fill="both", expand=True, padx=24, pady=(6, 20))
@@ -41,6 +42,26 @@ class RecordsPage(tk.Frame):
                               font=FONTS["body"], relief="flat", wrap="word", height=18)
         self.detail.pack(fill="both", expand=True, pady=(8, 0))
         self.rows = {}
+
+    def scan_chat(self):
+        """翻聊天记录，找她在我那条提醒之后的回复。"""
+        from ..wechat import history
+        self.detail.configure(state="normal")
+        self.detail.delete("1.0", "end")
+        self.detail.insert("1.0", "正在扫描微信聊天窗口…（约 5 秒）")
+
+        def run():
+            ask = self.app.cfg["meals"]["午餐"]["ask_text"]
+            replies, err = history.find_replies(self.app.cfg, ask)
+            def done():
+                self.detail.delete("1.0", "end")
+                if replies:
+                    self.detail.insert("1.0", "扫描到她的回复：\n\n" + "\n".join("· " + t for t in replies))
+                else:
+                    self.detail.insert("1.0", "没找到：" + (err or "未知原因") +
+                                       "\n\n截图已存到 logs/last_scan.png，可以看看抓到的画面")
+            self.after(0, done)
+        threading.Thread(target=run, daemon=True).start()
 
     def open_manual(self):
         from datetime import date

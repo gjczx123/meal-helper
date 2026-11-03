@@ -53,8 +53,28 @@ def conn():
 
 
 def insert_meal(rec: dict) -> int:
+    """同一天同一餐只保留一条：已存在就更新，不再插入新的。"""
     c = conn()
     try:
+        old = c.execute("SELECT id FROM meal_records WHERE date=? AND meal=? ORDER BY id DESC LIMIT 1",
+                        (rec.get("date"), rec.get("meal"))).fetchone()
+        if old:
+            c.execute(
+                """UPDATE meal_records SET msg_time=?, source=?, raw_text=?, image_path=?,
+                   plan_day=?, items_json=?, status=?, verdict_reason=?, analysis_json=?,
+                   reply_text=?, sent_at=?, verify_ok=? WHERE id=?""",
+                (
+                    rec.get("msg_time"), rec.get("source", "text"), rec.get("raw_text", ""),
+                    rec.get("image_path", ""), rec.get("plan_day"),
+                    json.dumps(rec.get("items", []), ensure_ascii=False),
+                    rec.get("status", "unparsed"), rec.get("verdict_reason", ""),
+                    json.dumps(rec.get("analysis", {}), ensure_ascii=False),
+                    rec.get("reply_text", ""), rec.get("sent_at", ""),
+                    int(rec.get("verify_ok", 0)), old["id"],
+                ),
+            )
+            c.commit()
+            return int(old["id"])
         cur = c.execute(
             """INSERT INTO meal_records
                (date, meal, msg_time, source, raw_text, image_path, plan_day,
@@ -145,6 +165,23 @@ def recent_logs(limit: int = 20) -> list:
     try:
         return [dict(r) for r in c.execute(
             "SELECT * FROM send_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+    finally:
+        c.close()
+
+
+def dedupe() -> int:
+    """清掉历史重复：同一天同一餐只留最新一条。"""
+    c = conn()
+    try:
+        rows = c.execute("""SELECT date, meal, MAX(id) AS keep FROM meal_records
+                            GROUP BY date, meal HAVING COUNT(*) > 1""").fetchall()
+        removed = 0
+        for r in rows:
+            cur = c.execute("DELETE FROM meal_records WHERE date=? AND meal=? AND id<>?",
+                            (r["date"], r["meal"], r["keep"]))
+            removed += cur.rowcount
+        c.commit()
+        return removed
     finally:
         c.close()
 

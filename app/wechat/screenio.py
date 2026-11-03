@@ -86,7 +86,7 @@ def _message_blocks(img):
     lum = (arr[:, :, 0] * 299 + arr[:, :, 1] * 587 + arr[:, :, 2] * 114) // 1000
     left = chat_left(arr)
     x0, x1 = min(left + 4, w - 10), int(w * 0.995)
-    y0, y1 = int(h * 0.08), int(h * 0.97)
+    y0, y1 = int(h * 0.13), int(h * 0.97)
     sub = lum[y0:y1, x0:x1]
     dark = sub < 120
     rows = dark.sum(axis=1)

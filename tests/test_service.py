@@ -37,7 +37,7 @@ class ServiceTest(unittest.TestCase):
     def run_meal(self, reader, sender=None):
         return service.run_meal(self.cfg, self.plan, "午餐", sender or FakeSender(),
                                 reader, now=self.now, sleep=lambda s: None,
-                                wait_minutes=1, poll_seconds=0)
+                                wait_minutes=1, poll_seconds=0, backfill=False)
 
     def test_reply_recorded(self):
         r = self.run_meal(FakeReader([{"id": "x1", "text": "午餐肉一份，魔芋面", "ts": "12:31"}]))
@@ -54,6 +54,6 @@ class ServiceTest(unittest.TestCase):
     def test_no_reply(self):
         r = service.run_meal(self.cfg, self.plan, "午餐", FakeSender(),
                              FakeReader([]), now=self.now, sleep=lambda s: None,
-                             wait_minutes=0, poll_seconds=0)
+                             wait_minutes=0, poll_seconds=0, backfill=False)
         self.assertFalse(r["ok"])
         self.assertEqual(r["reason"], "no_reply")
